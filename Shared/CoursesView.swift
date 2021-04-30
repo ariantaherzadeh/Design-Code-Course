@@ -10,49 +10,51 @@ import SwiftUI
 struct CoursesView: View {
     @State var show = false
     @Namespace var namespace
+    @State var selectedItem: Course? = nil
+    @State var isDisabled = false
     
     var body: some View {
         ZStack {
             ScrollView {
-                VStack(spacing: 20) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 16)], spacing: 16) {
                     ForEach(courses) { item in
-                        CourseItem(course: item)
-                            .matchedGeometryEffect(id: item.id, in: namespace, isSource: !show)
-                            .frame(width: 335, height: 250)
+                        VStack {
+                            CourseItem(course: item)
+                                .matchedGeometryEffect(id: item.id, in: namespace, isSource: !show)
+                                .frame(height: 200)
+                                .onTapGesture {
+                                    withAnimation(.spring(response: 0.5, dampingFraction: 0.7, blendDuration: 0)) {
+                                        show.toggle()
+                                        selectedItem = item
+                                        isDisabled = true
+                                    }
+                                }
+                                .disabled(isDisabled)
+                        }
+                        .matchedGeometryEffect(id: "container\(item.id)", in: namespace, isSource: !show)
                     }
                 }
+                .padding(16)
                 .frame(maxWidth: .infinity)
             }
-            if show {
-                ScrollView {
-                    CourseItem(course: courses[0])
-                        .matchedGeometryEffect(id: courses[0].id, in: namespace)
-                        .frame(height: 300)
-                    VStack {
-                        ForEach(0 ..< 20) { item in
-                            CourseRow()
-                                .padding()
-                        }
-                    }
-                    .padding()
-                }
-                .background(Color("Background 1"))
-                .transition(
-                    .asymmetric(
-                        insertion: AnyTransition
-                            .opacity
-                            .animation(Animation.spring().delay(0.3)),
-                        removal: AnyTransition
-                            .opacity
-                            .animation(Animation.spring()))
+            .zIndex(1)
+            if selectedItem != nil {
+                ZStack(alignment: .topTrailing) {
+                    CourseDetail(course: selectedItem!, namespace: namespace)
                     
-                )
-                .edgesIgnoringSafeArea(.all)
-            }
-        }
-        .onTapGesture {
-            withAnimation(.spring()) {
-                show.toggle()
+                    CloseButton()
+                        .padding(.trailing, 16)
+                        .onTapGesture {
+                            withAnimation(.spring()) {
+                                show.toggle()
+                                selectedItem = nil
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                    isDisabled = false
+                                }
+                            }
+                        }
+                }
+                .zIndex(2)
             }
         }
     }
